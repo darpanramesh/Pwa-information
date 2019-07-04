@@ -1,0 +1,108 @@
+const cacheName = 'news-dynamic';
+const staticAssets = [
+    './',
+    './index.html',
+    './app.js',
+]
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(cacheName).then(function(cache) {
+          console.log('[ServiceWorker] Caching app shell');
+          return cache.addAll(staticAssets);
+        })
+      );
+})
+self.addEventListener('fetch', event => {
+    const req = event.request;
+    const url = new URL(req.url);
+    if (url.origin === location.origin) {
+        event.respondWith(cacheFirst(req))
+    } else {
+        event.respondWith(networkFirst(req))
+    }
+})
+
+async function cacheFirst(req) {
+    const cacheResponse = await caches.match(req);
+    return cacheResponse || fetch(req);
+}
+
+async function networkFirst(req) {
+    const cache = await caches.open(cacheName);
+    try {
+        const res = await fetch(req);
+        cache.put(req, res.clone())
+        return res
+    } catch (error) {
+        return await cache.match(req)
+    }
+}
+
+
+//For connect to pwa file in script
+
+window.addEventListener('load', async e => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(() => {
+                console.log('service worker register')
+            })
+    }
+})
+
+//FOr icon setting
+
+{
+    "name": "todo",
+    "short_name": "todo",
+    "theme_color": "#2196f3",
+    "background_color": "#2196f3",
+    "display": "standalone",
+    "start_url": "./index.html",
+    "icons": [{
+        "src": "todoicon.png",
+          "sizes": "128x128",
+          "type": "image/png"
+        }, {
+          "src": "todoicon",
+          "sizes": "144x144",
+          "type": "image/png"
+        }, {
+          "src": "todoicon",
+          "sizes": "152x152",
+          "type": "image/png"
+        }, {
+          "src": "todoicon",
+          "sizes": "192x192",
+          "type": "image/png"
+        },
+        {
+          "src": "todoicon",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+  }
+
+
+
+//Push Notification
+
+window.addEventListener('load', async e => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('ServiceWorker.js')
+            .then(async(registration) => {
+                const permission = await window.Notification.requestPermission();
+                if(permission !== `granted`){
+                    throw new Error(`permission not granted for Notificaion`);
+                }
+                const title = `simple title`;
+                const options = {
+                    body: `Simple piece of body text. /n second line of body text :)`
+                };
+                registration.showNotification(title, options);
+                console.log('service worker register')
+            })
+    }
+})
